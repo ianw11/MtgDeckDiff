@@ -4,6 +4,7 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
     Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  background-color: rebeccapurple;
 }
 
 a {
@@ -19,19 +20,31 @@ a {
   display: block;
   margin-left: auto;
   margin-right: auto;
-  font-weight: 400;
+  font-size: 20px;
   text-decoration: none;
-  border: 1px solid white;
   padding: 10px;
-  color: white;
+  color: black;
   background: cyan;
-  width: 60%;
+  width: 20%;
+  border-radius: 20px;
+  text-align: center;
 }
 .Collapsible__contentOuter {
-  background-color: lightgray;
+  /*background-color: lightgray;*/
 }
 
-.Collapsible__contentInner {
+#formatRadioButtonContainer {
+  width: fit-content;
+  margin: 20px auto;
+  background-color: lightgrey;
+}
+
+.FormatRadioButton {
+  margin-left: 40px;
+  font-size: 30px;
+}
+
+#inputContainer {
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
@@ -41,16 +54,26 @@ a {
 .DeckInput {
   flex: 1;
   margin: 10px;
-  padding: 5px;
+  padding: 15px;
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
+
+  border-radius: 30px;
 }
 
 .DeckOutput {
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
+
+  margin-top: 20px;
+}
+
+.DeckComparison {
+  padding: 0 30px;
+  background-color: lightgrey;
+  border-radius: 10px;
 }
 
 #hoveredCard {

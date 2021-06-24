@@ -1,5 +1,6 @@
 import React from "react";
 import {Deck} from "../types/Deck";
+import {CardAndQuantity} from "../types/CardAndQuantity";
 const diff_match_patch_lib = require("../diff_match_patch");
 const {diff_match_patch, DIFF_EQUAL, DIFF_DELETE, DIFF_INSERT} = diff_match_patch_lib;
 
@@ -65,7 +66,7 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
 
         const sideboardOne = this.props.deckOne.sideboardToString();
         const sideboardTwo = this.props.deckTwo.sideboardToString();
-        if (sideboardOne.length > 0 && sideboardTwo.length > 0) {
+        if (sideboardOne.length > 0 || sideboardTwo.length > 0) {
             const sideboardResult = this.diffLines(sideboardOne, sideboardTwo);
 
             sideboardResult.forEach((DIFF: any) => {
@@ -110,14 +111,60 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
     }
 
     buildList(list: string[]) {
+        // We can get away with this because a Plains is ALWAYS a Plains
+        const basicLandCounts: Record<string, number> = {
+            'Plains': 0,
+            'Island': 0,
+            'Swamp': 0,
+            'Mountain': 0,
+            'Forest': 0,
+            'Snow-Covered Plains': 0,
+            'Snow-Covered Island': 0,
+            'Snow-Covered Swamp': 0,
+            'Snow-Covered Mountain': 0,
+            'Snow-Covered Forest': 0,
+        };
+
+        const listItems = list.map((name) => {
+            if (basicLandCounts[name] !== undefined) {
+                ++basicLandCounts[name];
+                return;
+            }
+            return (<li onMouseEnter={() => { this.loadImageUri(name); }}>
+                {name}
+            </li>);
+        });
+
+        Object.entries(basicLandCounts).forEach((entry) => {
+            const [name, count] = entry;
+            if (count === 0) {
+                return;
+            }
+            listItems.push(<li onMouseEnter={() => { this.loadImageUri(name) }}>
+                {count}x {name}
+            </li>);
+        });
+
         return (
             <ul>
-                {list.map((name) => {
-                    return (<li onMouseEnter={() => { this.loadImageUri(name); }}>
-                        {name}
-                    </li>);
-                })}
+                {listItems}
             </ul>
+        );
+    }
+
+    private buildDeckComparisonOutput(deckList: string[], sideboardList: string[]) {
+        // Returns an empty div to maintain spacing (in the flexbox)
+        return deckList.length === 0 ? <div /> : (
+            (<div className={'DeckComparison'}>
+
+                {this.buildList(deckList)}
+                {sideboardList.length === 0 ? null :
+                    (<div>
+                        <br />
+                        {this.buildList(sideboardList)}
+                    </div>)
+                }
+            </div>)
         );
     }
 
@@ -125,30 +172,16 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
 
         const computeResult = this.compute();
 
-        return (
-            <div>
-                {this.state.hoveredCardUri ? (
-                    <img id={'hoveredCard'} src={this.state.hoveredCardUri} alt={"Current Card"} width={244} height={340}/>
-                ) : null}
+        const imageWidth = 244;
+        const imageHeight = 340;
 
-                <div className={"DeckOutput"}>
-                    <div>
-                        In Deck 1
-                        {this.buildList(computeResult.inDeckOne)}
-                        {(computeResult.inSideboardOne.length > 0 ? (<div>
-                            In Sideboard
-                            {this.buildList(computeResult.inSideboardOne)}
-                        </div>) : null)}
-                    </div>
-                    <div>
-                        In Deck 2
-                        {this.buildList(computeResult.inDeckTwo)}
-                        {computeResult.inSideboardTwo.length > 0 ? (<div>
-                            In Sideboard
-                            {this.buildList(computeResult.inSideboardTwo)}
-                        </div>) : null}
-                    </div>
-                </div>
+        return (
+            <div className={"DeckOutput"}>
+                {this.buildDeckComparisonOutput(computeResult.inDeckOne, computeResult.inSideboardOne)}
+                {this.state.hoveredCardUri ? (
+                    <img id={'hoveredCard'} src={this.state.hoveredCardUri} alt={"Current Card"} width={imageWidth} height={imageHeight}/>
+                ) : <span style={{marginRight: imageWidth}} />}
+                {this.buildDeckComparisonOutput(computeResult.inDeckTwo, computeResult.inSideboardTwo)}
             </div>
         );
     }

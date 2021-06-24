@@ -1,11 +1,11 @@
-import {Deck, DeckType} from "./Deck";
+import {Deck, DeckType, ValidationError} from "./Deck";
 import {CardAndQuantity} from "./CardAndQuantity";
 
 type MagicCardData = {
     quantity: number;
     name: string;
-    set: string;
-    cardId: string;
+    set?: string;
+    cardId?: string;
 }
 
 export class MtgDeck extends Deck {
@@ -16,16 +16,16 @@ export class MtgDeck extends Deck {
         super(type);
     }
 
-    processLine(line: string): string | undefined {
+    processLine(line: string): ValidationError | undefined {
         const data = this.parseMagicCardLine(line);
         if (!data) {
             return;
         }
         if (typeof data === 'string') {
-            return data;
+            return {message: data};
         }
-        const {name, quantity} = data;
-        const card = new CardAndQuantity(name, quantity);
+        const {name, quantity, set} = data;
+        const card = new CardAndQuantity(name, set, quantity);
         if (this.inMainboard) {
             this.addToMainboard(card);
         } else {
@@ -35,7 +35,7 @@ export class MtgDeck extends Deck {
     }
 
     protected parseMagicCardLine(line: string): string | MagicCardData | undefined {
-        if (line === 'Deck' || line === '') {
+        if (line === 'Deck' || line.length === 0) {
             return;
         }
         if (line === 'Commander') {
@@ -47,9 +47,8 @@ export class MtgDeck extends Deck {
         }
 
         const split = line.split(" ");
-        if (split.length < 4) {
-            //console.error("Line did not split into 4 or more segments: " + line);
-            return "Line did not split into 4 or more segments: " + line;
+        if (split.length < 2) {
+            return "Line did not split into 2 or more segments: " + line;
         }
 
         const quantityStr = split[0];
@@ -60,16 +59,20 @@ export class MtgDeck extends Deck {
 
         const setStr = split[split.length - 2];
         const cardIdStr = split[split.length - 1];
+        let cardNameOffset = 0;
+        if (setStr.startsWith("(")) {
+            cardNameOffset = setStr.length + cardIdStr.length + 2; // Include 2 spaces
+        }
 
         const nameStartIndex = quantityStr.length + 1; // Include the space
-        const nameEndIndex = line.length - (setStr.length + cardIdStr.length + 2); // Include 2 spaces
+        const nameEndIndex = line.length - cardNameOffset;
         const name = line.substring(nameStartIndex, nameEndIndex);
 
         return {
             quantity,
             name,
-            set: setStr,
-            cardId: cardIdStr,
+            set: cardNameOffset > 0 ? setStr : undefined,
+            cardId: cardNameOffset > 0 ? cardIdStr : undefined,
         };
     }
 }

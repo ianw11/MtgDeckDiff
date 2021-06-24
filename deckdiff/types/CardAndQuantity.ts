@@ -1,9 +1,11 @@
 export class CardAndQuantity {
     readonly name: string;
+    readonly cardSet?: string;
     private quantity: number;
 
-    constructor(name: string, quantity = 0) {
+    constructor(name: string, cardSet?: string, quantity = 0) {
         this.name = name;
+        this.cardSet = cardSet;
         this.quantity = quantity;
     }
 
