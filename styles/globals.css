@@ -33,18 +33,15 @@ a {
   /*background-color: lightgray;*/
 }
 
-#formatRadioButtonContainer {
+#formatSelectContainer {
   width: fit-content;
   margin: 20px auto;
+  padding: 5px;
+  border-radius: 5px;
   background-color: lightgrey;
 }
 
-.FormatRadioButton {
-  margin-left: 40px;
-  font-size: 30px;
-}
-
-#inputContainer {
+#deckInputContainer {
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
@@ -81,4 +78,13 @@ a {
   float: left;
 }
 
+
+.EnumDropDown {
+  font-size: 20px;
+  font-weight: bold;
+}
+.EnumDropDownLabel {
+  margin-right: 10px;
+  font-size: 18px;
+}
 

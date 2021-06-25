@@ -1,8 +1,7 @@
 import React from "react";
 import {Deck} from "../types/Deck";
-import {CardAndQuantity} from "../types/CardAndQuantity";
 const diff_match_patch_lib = require("../diff_match_patch");
-const {diff_match_patch, DIFF_EQUAL, DIFF_DELETE, DIFF_INSERT} = diff_match_patch_lib;
+const {diff_match_patch, DIFF_EQUAL, DIFF_DELETE} = diff_match_patch_lib;
 
 type DiffCompute = {
     inDeckOne: string[];
@@ -16,6 +15,7 @@ export type DeckOutputProps = {
     deckTwo: Deck;
 }
 type DeckOutputState = {
+    hoveredCardName?: string;
     hoveredCardUri?: string;
 }
 export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState> {
@@ -25,7 +25,7 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
         this.state = {};
     }
 
-    diffLines(first: string, second: string) {
+    private diffLines(first: string, second: string) {
         const dmp = new diff_match_patch();
         const data = dmp.diff_linesToChars_(first, second);
         const diffs = dmp.diff_main(data.chars1, data.chars2, false);
@@ -33,7 +33,7 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
         return diffs;
     }
 
-    compute(): DiffCompute {
+    private compute(): DiffCompute {
         const compute: DiffCompute = {
             inDeckOne: [],
             inDeckTwo: [],
@@ -92,12 +92,27 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
         return compute;
     }
 
-    async loadImageUri(name: string) {
+    private async loadImageUri(name: string) {
+        if (name === this.state.hoveredCardName) {
+            return;
+        }
+
         const responseRaw = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${name}`);
         const response = await responseRaw.json();
 
+        if (response.object === 'error') {
+            const {code, type, status, details} = response;
+            console.error(`Failed to load image. code: ${code} || details: ${details}`);
+            return;
+        }
+
         let image_uris = response.image_uris;
         if (!image_uris) {
+            if (!response.card_faces) {
+                console.error("Could not find a card...");
+                console.log(response);
+                return;
+            }
             image_uris = response.card_faces[0].image_uris;
             if (!image_uris) {
                 console.error("Did not receive uri in: " + JSON.stringify(response));
@@ -106,11 +121,12 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
         }
 
         this.setState({
+            hoveredCardName: name,
             hoveredCardUri: image_uris.normal
         });
     }
 
-    buildList(list: string[]) {
+    private buildList(list: string[]) {
         // We can get away with this because a Plains is ALWAYS a Plains
         const basicLandCounts: Record<string, number> = {
             'Plains': 0,
@@ -125,12 +141,12 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
             'Snow-Covered Forest': 0,
         };
 
-        const listItems = list.map((name) => {
+        const listItems = list.map((name, ndx) => {
             if (basicLandCounts[name] !== undefined) {
                 ++basicLandCounts[name];
                 return;
             }
-            return (<li onMouseEnter={() => { this.loadImageUri(name); }}>
+            return (<li key={`${name}${ndx}`} onMouseEnter={() => { this.loadImageUri(name); }}>
                 {name}
             </li>);
         });
@@ -140,7 +156,7 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
             if (count === 0) {
                 return;
             }
-            listItems.push(<li onMouseEnter={() => { this.loadImageUri(name) }}>
+            listItems.push(<li key={`${name}${count}`} onMouseEnter={() => { this.loadImageUri(name) }}>
                 {count}x {name}
             </li>);
         });
@@ -169,7 +185,6 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
     }
 
     render() {
-
         const computeResult = this.compute();
 
         const imageWidth = 244;
@@ -178,9 +193,11 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
         return (
             <div className={"DeckOutput"}>
                 {this.buildDeckComparisonOutput(computeResult.inDeckOne, computeResult.inSideboardOne)}
-                {this.state.hoveredCardUri ? (
-                    <img id={'hoveredCard'} src={this.state.hoveredCardUri} alt={"Current Card"} width={imageWidth} height={imageHeight}/>
-                ) : <span style={{marginRight: imageWidth}} />}
+                {this.state.hoveredCardUri ?
+                    (<img id={'hoveredCard'} src={this.state.hoveredCardUri} alt={"Current Card"} width={imageWidth} height={imageHeight}/>)
+                    : // Keep the spacing even if an image isn't showing
+                    (<span style={{marginRight: imageWidth}} />)
+                }
                 {this.buildDeckComparisonOutput(computeResult.inDeckTwo, computeResult.inSideboardTwo)}
             </div>
         );

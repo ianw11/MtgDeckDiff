@@ -1,40 +1,5 @@
 import {CardAndQuantity} from "./CardAndQuantity";
-
-export enum DeckType {
-    MTG_STANDARD = "M:tG Standard",
-    MTG_BRAWL = "M:tG Brawl",
-    MTG_HISTORIC_BRAWL = "M:tG Historic 100-card Brawl",
-}
-
-type DeckParameter = {
-    readonly mainboardSize: number;
-    readonly mainboardIsSizeExact: boolean;
-    readonly sideboardSize: number;
-}
-function getDeckParameters(type: DeckType): DeckParameter {
-    switch (type) {
-        case DeckType.MTG_STANDARD:
-            return {
-                mainboardSize: 60,
-                mainboardIsSizeExact: false,
-                sideboardSize: 15
-            };
-        case DeckType.MTG_BRAWL:
-            return {
-                mainboardSize: 59,
-                mainboardIsSizeExact: true,
-                sideboardSize: 0
-            };
-        case DeckType.MTG_HISTORIC_BRAWL:
-            return {
-                mainboardSize: 99,
-                mainboardIsSizeExact: true,
-                sideboardSize: 0
-            };
-        default:
-            throw new Error("Invalid, unhandled DeckType: " + type);
-    }
-}
+import {DeckParameter, DeckType, getDeckParameters} from "./DeckType";
 
 export type ValidationError = {
     message: string;

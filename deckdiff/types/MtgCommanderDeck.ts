@@ -1,13 +1,15 @@
 import {MtgDeck} from "./MtgDeck";
 import {CardAndQuantity} from "./CardAndQuantity";
-import {DeckType, ValidationError} from "./Deck";
+import {ValidationError} from "./Deck";
+import {LineFormat} from "./LineFormat";
+import {DeckType} from "./DeckType";
 
 export class MtgCommanderDeck extends MtgDeck {
     private commander?: CardAndQuantity;
     private lineCounter = 0;
 
-    constructor(type: DeckType) {
-        super(type);
+    constructor(type: DeckType, lineFormat: LineFormat) {
+        super(type, lineFormat);
     }
 
     processLine(line: string): ValidationError | undefined {

@@ -1,5 +1,7 @@
-import {Deck, DeckType, ValidationError} from "./Deck";
+import {Deck, ValidationError} from "./Deck";
 import {CardAndQuantity} from "./CardAndQuantity";
+import {LineFormat} from "./LineFormat";
+import {DeckType} from "./DeckType";
 
 type MagicCardData = {
     quantity: number;
@@ -10,10 +12,14 @@ type MagicCardData = {
 
 export class MtgDeck extends Deck {
 
-    inMainboard = true;
+    readonly lineFormat: LineFormat;
 
-    constructor(type: DeckType) {
+    private inMainboard = true;
+    private skipNextLine = false;
+
+    constructor(type: DeckType, lineFormat: LineFormat) {
         super(type);
+        this.lineFormat = lineFormat;
     }
 
     processLine(line: string): ValidationError | undefined {
@@ -22,7 +28,7 @@ export class MtgDeck extends Deck {
             return;
         }
         if (typeof data === 'string') {
-            return {message: data};
+            return {message: data.replaceAll("%LINE%", line)};
         }
         const {name, quantity, set} = data;
         const card = new CardAndQuantity(name, set, quantity);
@@ -31,15 +37,22 @@ export class MtgDeck extends Deck {
         } else {
             this.addToSideboard(card);
         }
-        return;
     }
 
     protected parseMagicCardLine(line: string): string | MagicCardData | undefined {
+        if (this.skipNextLine) {
+            this.skipNextLine = false;
+            return;
+        }
         if (line === 'Deck' || line.length === 0) {
             return;
         }
         if (line === 'Commander') {
             return "Found Commander in non-Commander deck list";
+        }
+        if (line === 'Companion') {
+            this.skipNextLine = true;
+            return;
         }
         if (line === 'Sideboard') {
             this.inMainboard = false;
@@ -47,32 +60,52 @@ export class MtgDeck extends Deck {
         }
 
         const split = line.split(" ");
+
+        switch (this.lineFormat) {
+            case LineFormat.ARENA_EXPORT:
+                return this.parseArenaLine(split);
+            case LineFormat.BASIC:
+                return this.parseBasicLine(split);
+            default:
+                throw new Error("Unknown line format");
+        }
+    }
+
+    private parseArenaLine(split: string[]): string | MagicCardData | undefined {
+        if (split.length < 4) {
+            return "Line did not split into 4 or more segments: %LINE%";
+        }
+
+        const cardIdStr = split.pop();
+        const setStr = split.pop();
+
+        const basicData = this.parseBasicLine(split);
+        if (typeof basicData === 'string') {
+            return basicData;
+        }
+        return { ...basicData, set: setStr, cardId: cardIdStr };
+    }
+
+    private parseBasicLine(split: string[]): string | MagicCardData {
+        const quantity = this.getQuantity(split);
+        if (typeof quantity === "string") {
+            return quantity;
+        }
+
+        const name = split.join(" ");
+
+        return { quantity, name };
+    }
+
+    private getQuantity(split: string[]): string | number {
         if (split.length < 2) {
-            return "Line did not split into 2 or more segments: " + line;
+            return "Line did not split into 2 or more segments: %LINE%";
         }
-
-        const quantityStr = split[0];
+        const quantityStr = split.shift() ?? "0";
         const quantity = parseInt(quantityStr);
-        if (isNaN(quantity)) {
-            return "Invalid quantity for line: " + line;
+        if (isNaN(quantity) || quantity < 1) {
+            return "Invalid quantity for line: %LINE%";
         }
-
-        const setStr = split[split.length - 2];
-        const cardIdStr = split[split.length - 1];
-        let cardNameOffset = 0;
-        if (setStr.startsWith("(")) {
-            cardNameOffset = setStr.length + cardIdStr.length + 2; // Include 2 spaces
-        }
-
-        const nameStartIndex = quantityStr.length + 1; // Include the space
-        const nameEndIndex = line.length - cardNameOffset;
-        const name = line.substring(nameStartIndex, nameEndIndex);
-
-        return {
-            quantity,
-            name,
-            set: cardNameOffset > 0 ? setStr : undefined,
-            cardId: cardNameOffset > 0 ? cardIdStr : undefined,
-        };
+        return quantity;
     }
 }
