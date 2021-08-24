@@ -1,20 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
 html,
 body {
   padding: 0;
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
     Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
-  background-color: rebeccapurple;
+
+
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-* {
-  box-sizing: border-box;
-}
 
 .Collapsible__trigger {
   display: block;
@@ -30,34 +28,12 @@ a {
   text-align: center;
 }
 .Collapsible__contentOuter {
-  /*background-color: lightgray;*/
+  margin-top: 5px;
+  background-color: dimgrey;
 }
 
-#formatSelectContainer {
-  width: fit-content;
-  margin: 20px auto;
-  padding: 5px;
-  border-radius: 5px;
-  background-color: lightgrey;
-}
 
-#deckInputContainer {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-evenly;
-  align-items: flex-start;
-}
 
-.DeckInput {
-  flex: 1;
-  margin: 10px;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-
-  border-radius: 30px;
-}
 
 .DeckOutput {
   display: flex;
@@ -68,9 +44,13 @@ a {
 }
 
 .DeckComparison {
-  padding: 0 30px;
-  background-color: lightgrey;
+  padding: 10px 30px;
   border-radius: 10px;
+}
+
+.FreeFloatingListItem {
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 
 #hoveredCard {
@@ -78,13 +58,18 @@ a {
   float: left;
 }
 
-
 .EnumDropDown {
-  font-size: 20px;
-  font-weight: bold;
+  width: fit-content;
+  background-color: lightgrey;
+  padding: 10px;
+  border-radius: 10px;
 }
 .EnumDropDownLabel {
-  margin-right: 10px;
   font-size: 18px;
 }
-
+.EnumDropDownSelect {
+  font-size: 20px;
+  font-weight: bold;
+  padding: 0 10px;
+  margin-left: 15px;
+}

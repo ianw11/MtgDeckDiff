@@ -1,6 +1,6 @@
 export enum LineFormat {
-    ARENA_EXPORT = 'ARENA',
-    BASIC = 'BASIC'
+    BASIC = 'BASIC',
+    ARENA_EXPORT = 'ARENA'
 }
 
 export function getLineFormatSample(lineFormat: LineFormat) {

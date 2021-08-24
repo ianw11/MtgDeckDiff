@@ -1,13 +1,10 @@
 import React from "react";
 import Collapsible from "react-collapsible";
 import DeckInput from "./DeckInput";
-import {Deck} from "../types/Deck";
 import {DeckOutput} from "./DeckOutput";
-import {MtgDeck} from "../types/MtgDeck";
-import {MtgCommanderDeck} from "../types/MtgCommanderDeck";
 import {EnumDropDown} from "./EnumDropDown";
 import {LineFormat} from "../types/LineFormat";
-import {DeckType} from "../types/DeckType";
+import {createNewDeck, DeckType} from "../types/DeckType";
 
 type PageState = {
     deckType: DeckType;
@@ -26,29 +23,10 @@ export class Page extends React.Component<any, PageState> {
         };
     }
 
-    private createNewDeck(text: string, lineFormat: LineFormat): Deck {
-        const deckType = this.state.deckType;
-        let deck: Deck;
-        switch (deckType) {
-            case DeckType.MTG_REGULAR:
-                deck = new MtgDeck(deckType, lineFormat);
-                break;
-            case DeckType.MTG_BRAWL:
-            case DeckType.MTG_HISTORIC_BRAWL:
-                deck = new MtgCommanderDeck(deckType, lineFormat);
-                break;
-            default:
-                throw new Error("That deck type is not built out yet");
-        }
-
-        deck.applyText(text);
-        return deck;
-    }
-
     render() {
-        const { textOne, lineFormatOne, textTwo, lineFormatTwo } = this.state;
-        const deckOne = this.createNewDeck(textOne ?? "", lineFormatOne);
-        const deckTwo = this.createNewDeck(textTwo ?? "", lineFormatTwo);
+        const { deckType, textOne, lineFormatOne, textTwo, lineFormatTwo } = this.state;
+        const deckOne = createNewDeck(deckType,textOne ?? "", lineFormatOne);
+        const deckTwo = createNewDeck(deckType,textTwo ?? "", lineFormatTwo);
 
         return (
             <div>
@@ -57,7 +35,7 @@ export class Page extends React.Component<any, PageState> {
                 </h1>
 
                 <Collapsible trigger={"(+) Expand Deck input"} triggerWhenOpen={"(-) Collapse Deck input"} open={true}>
-                    <div id={'formatSelectContainer'}>
+                    <div className={'mx-auto my-10 max-w-max'}>
                         <EnumDropDown
                             label={"Deck Format:"}
                             entries={Object.entries(DeckType)}
@@ -65,7 +43,7 @@ export class Page extends React.Component<any, PageState> {
                             onValueSelected={deckType => { this.setState({ deckType }); }} />
                     </div>
 
-                    <div id={'deckInputContainer'}>
+                    <div className={'flex flex-row items-start justify-evenly'}>
                         <DeckInput deck={deckOne}
                                    onDeckTextChanged={(text: string) => this.setState({textOne: text})}
                                    onLineFormatChanged={lineFormat => this.setState({lineFormatOne: lineFormat})}/>

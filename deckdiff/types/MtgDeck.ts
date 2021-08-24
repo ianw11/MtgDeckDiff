@@ -1,7 +1,8 @@
-import {Deck, ValidationError} from "./Deck";
+import {ComparisonError, Deck, ValidationError} from "./Deck";
 import {CardAndQuantity} from "./CardAndQuantity";
 import {LineFormat} from "./LineFormat";
 import {DeckType} from "./DeckType";
+import {compileNonPath} from "next/dist/next-server/lib/router/utils/prepare-destination";
 
 type MagicCardData = {
     quantity: number;
@@ -15,7 +16,9 @@ export class MtgDeck extends Deck {
     readonly lineFormat: LineFormat;
 
     private inMainboard = true;
-    private skipNextLine = false;
+
+    private companion?: CardAndQuantity;
+    private companionNextLine = false;
 
     constructor(type: DeckType, lineFormat: LineFormat) {
         super(type);
@@ -32,18 +35,22 @@ export class MtgDeck extends Deck {
         }
         const {name, quantity, set} = data;
         const card = new CardAndQuantity(name, set, quantity);
+
+        if (this.companionNextLine) {
+            this.companionNextLine = false;
+            this.companion = card;
+            return;
+        }
         if (this.inMainboard) {
             this.addToMainboard(card);
         } else {
-            this.addToSideboard(card);
+            if (this.companion === undefined || this.companion.name !== card.name) {
+                this.addToSideboard(card);
+            }
         }
     }
 
     protected parseMagicCardLine(line: string): string | MagicCardData | undefined {
-        if (this.skipNextLine) {
-            this.skipNextLine = false;
-            return;
-        }
         if (line === 'Deck' || line.length === 0) {
             return;
         }
@@ -51,7 +58,7 @@ export class MtgDeck extends Deck {
             return "Found Commander in non-Commander deck list";
         }
         if (line === 'Companion') {
-            this.skipNextLine = true;
+            this.companionNextLine = true;
             return;
         }
         if (line === 'Sideboard') {
@@ -107,5 +114,31 @@ export class MtgDeck extends Deck {
             return "Invalid quantity for line: %LINE%";
         }
         return quantity;
+    }
+
+    compareAgainst(other: Deck): ComparisonError[] {
+        const companionErrors: ValidationError[] = [];
+
+        if (! (other instanceof MtgDeck)) {
+            companionErrors.push({message: 'Cannot compare Decks - wrong type (non-MtG)'})
+        } else {
+            const otherCompanion = other.companion;
+            if (otherCompanion !== undefined) {
+                if (this.companion === undefined) {
+                    companionErrors.push({message: 'This deck does not have a Companion', severity: "WARN"})
+                } else if (this.companion.name !== otherCompanion.name) {
+                    companionErrors.push({message: 'Companions do not match'});
+                }
+            }
+        }
+
+        const errors = super.compareAgainst(other);
+        if (companionErrors.length > 0) {
+            errors.push({
+                listName: 'Companion',
+                comparisonValidationErrors: companionErrors
+            });
+        }
+        return errors;
     }
 }

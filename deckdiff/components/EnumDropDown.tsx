@@ -1,7 +1,7 @@
 import React, {ChangeEvent} from "react";
 
 export interface EnumDropDownProps<T> {
-    label: string;
+    label?: string;
     entries: [string, T][];
     initialValue: T;
     onValueSelected(value: T): void;
@@ -34,20 +34,23 @@ export class EnumDropDown<T extends string> extends React.Component<EnumDropDown
         });
 
         return (
-            <div>
-                <span className={'EnumDropDownLabel'}>
-                    {this.props.label}
-                </span>
-                <select className={'EnumDropDown'}
+            <div className={'EnumDropDown'}>
+                {this.props.label ? (
+                    <span className={'EnumDropDownLabel'}>
+                        {this.props.label}
+                    </span>
+                ) : null}
+
+                <select className={'EnumDropDownSelect'}
                         defaultValue={this.props.initialValue}
                         onChange={(event) => { this.onSelect(event); }} >
                     {options}
                 </select>
+
                 {(this.props.exampleText === undefined) ? null :
-                    (<span>
-                        <br />
-                        <span>Example: <b>{this.props.exampleText(this.state.value)}</b></span>
-                    </span>)
+                    (<div style={{margin: '5px auto', width: 'fit-content'}}>
+                        Example: <b>"{this.props.exampleText(this.state.value)}"</b>
+                    </div>)
                 }
             </div>
         );

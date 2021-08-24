@@ -3,23 +3,27 @@ import {DeckParameter, DeckType, getDeckParameters} from "./DeckType";
 
 export type ValidationError = {
     message: string;
+    severity?: 'WARN' | 'ERROR';
+}
+
+export type ComparisonError = {
+    listName: string;
+    comparisonValidationErrors: ValidationError[];
 }
 
 export abstract class Deck {
-    readonly timestamp: number;
     readonly type: DeckType;
     readonly mainboard: CardAndQuantity[] = [];
     readonly sideboard: CardAndQuantity[] = [];
     readonly parameters: DeckParameter;
-    readonly validationErrors: ValidationError[] = []
+    readonly validationErrors: ValidationError[] = [];
 
     protected constructor(type: DeckType) {
-        this.timestamp = Date.now();
         this.type = type;
         this.parameters = getDeckParameters(type);
     }
 
-    applyText(text: string) {
+    applyText(text: string): Deck {
         text.split("\n").forEach((line) => {
             const validationError = this.processLine(line);
             if (validationError) {
@@ -27,22 +31,46 @@ export abstract class Deck {
             }
         });
 
+        this.validateSelf().forEach(vError => {
+            this.validationErrors.push(vError);
+        });
+
+        return this;
+    }
+
+    protected abstract processLine(line: string): ValidationError | undefined;
+
+    /*
+        This method is expected to be overridden by child classes
+        to provide additional checks
+     */
+    protected validateSelf(): ValidationError[] {
+        const errors = [];
+
         const mainboardSize = this.getNumCardsInMainboard();
         const sideboardSize = this.getNumCardsInSideboard();
         const params = this.parameters;
 
         if (params.mainboardIsSizeExact && mainboardSize !== params.mainboardSize) {
-            this.validationErrors.push({message: `Deck size must be EXACTLY ${params.mainboardSize} cards`});
+            errors.push({message: `Deck size must be EXACTLY ${params.mainboardSize} cards`});
         }
         if (!params.mainboardIsSizeExact && mainboardSize < params.mainboardSize) {
-            this.validationErrors.push({message: `Deck size must be AT LEAST ${params.mainboardSize} cards`});
+            errors.push({message: `Deck size must be AT LEAST ${params.mainboardSize} cards`});
         }
         if (sideboardSize > params.sideboardSize) {
-            this.validationErrors.push({message: `Sideboard cannot exceed ${params.sideboardSize} cards`});;
+            errors.push({message: `Sideboard cannot exceed ${params.sideboardSize} cards`});;
         }
+
+        return errors;
     }
 
-    protected abstract processLine(line: string): ValidationError | undefined;
+    /*
+        This method is expected to be overridden by child classes
+        to provide additional checks
+     */
+    public compareAgainst(other: Deck): ComparisonError[] {
+        return [];
+    }
 
     protected addToMainboard(card: CardAndQuantity) {
         this.mainboard.push(card);

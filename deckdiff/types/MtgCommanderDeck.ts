@@ -1,28 +1,25 @@
 import {MtgDeck} from "./MtgDeck";
 import {CardAndQuantity} from "./CardAndQuantity";
-import {ValidationError} from "./Deck";
+import {ComparisonError, Deck, ValidationError} from "./Deck";
 import {LineFormat} from "./LineFormat";
 import {DeckType} from "./DeckType";
 
 export class MtgCommanderDeck extends MtgDeck {
     private commander?: CardAndQuantity;
-    private lineCounter = 0;
+    private nextLineIsCommander = false;
 
     constructor(type: DeckType, lineFormat: LineFormat) {
         super(type, lineFormat);
     }
 
     processLine(line: string): ValidationError | undefined {
-        ++this.lineCounter;
-        if (this.lineCounter === 1) {
-            if (line !== 'Commander') {
-                // This assumes the next line is NOT the Commander
-                ++this.lineCounter;
-                return {message: 'Expected the first line to exactly match: "Commander"'};
-            }
+        if (line == 'Commander') {
+            this.nextLineIsCommander = true;
             return;
         }
-        if (this.lineCounter === 2) {
+        if (this.nextLineIsCommander) {
+            this.nextLineIsCommander = false;
+
             const data = this.parseMagicCardLine(line);
             if (!data) {
                 return {message: "Unable to parse Commander from: " + line};
@@ -41,5 +38,40 @@ export class MtgCommanderDeck extends MtgDeck {
 
     getCommander(): CardAndQuantity | undefined {
         return this.commander;
+    }
+
+    protected validateSelf(): ValidationError[] {
+        const errors = super.validateSelf();
+
+        if (this.commander === undefined) {
+            errors.push({message: 'Commander not found; expected a Commander'});
+        }
+
+        return errors;
+    }
+
+    compareAgainst(other: Deck): ComparisonError[] {
+
+        const comparisonErrors = [];
+
+        // Ensure the other deck is a Commander Deck
+        if (!(other instanceof MtgCommanderDeck)) {
+            comparisonErrors.push({message: 'Cannot compare Decks - wrong type (non-Commander)'});
+        } else {
+            const otherCommander = other.commander;
+            // Ensure the other Commander Deck has a Commander and it matches the Commander from this deck
+            if (this.commander !== undefined && otherCommander !== undefined && otherCommander.name !== this.commander.name) {
+                comparisonErrors.push({message: 'Commanders do not match'});
+            }
+        }
+
+        const errors = super.compareAgainst(other);
+        if (comparisonErrors.length > 0) {
+            errors.push({
+                listName: 'Commander',
+                comparisonValidationErrors: comparisonErrors
+            });
+        }
+        return errors;
     }
 }

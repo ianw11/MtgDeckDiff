@@ -1,13 +1,13 @@
-import React from "react";
-import {Deck} from "../types/Deck";
+import React, {MouseEventHandler} from "react";
+import {ComparisonError, Deck} from "../types/Deck";
 const diff_match_patch_lib = require("../diff_match_patch");
 const {diff_match_patch, DIFF_EQUAL, DIFF_DELETE} = diff_match_patch_lib;
 
 type DiffCompute = {
-    inDeckOne: string[];
-    inDeckTwo: string[];
-    inSideboardOne: string[];
-    inSideboardTwo: string[];
+    inDeckOne: CardName[];
+    inDeckTwo: CardName[];
+    inSideboardOne: CardName[];
+    inSideboardTwo: CardName[];
 }
 
 export type DeckOutputProps = {
@@ -18,6 +18,11 @@ type DeckOutputState = {
     hoveredCardName?: string;
     hoveredCardUri?: string;
 }
+interface CardName {
+    name?: string;
+    displayName: string;
+}
+
 export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState> {
 
     constructor(props: DeckOutputProps) {
@@ -31,6 +36,15 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
         const diffs = dmp.diff_main(data.chars1, data.chars2, false);
         dmp.diff_charsToLines_(diffs, data.lineArray);
         return diffs;
+    }
+
+    private buildCardName(rawName: string): CardName {
+        const lastOpen = rawName.lastIndexOf("(");
+        const name = lastOpen === -1 ? rawName : rawName.substring(0, lastOpen).trim();
+        return {
+            name,
+            displayName: rawName
+        };
     }
 
     private compute(): DiffCompute {
@@ -57,9 +71,9 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
                     return;
                 }
                 if (operation === DIFF_DELETE) {
-                    compute.inDeckOne.push(name);
+                    compute.inDeckOne.push(this.buildCardName(name));
                 } else {
-                    compute.inDeckTwo.push(name);
+                    compute.inDeckTwo.push(this.buildCardName(name));
                 }
             });
         });
@@ -81,9 +95,9 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
                         return;
                     }
                     if (operation === DIFF_DELETE) {
-                        compute.inSideboardOne.push(name);
+                        compute.inSideboardOne.push(this.buildCardName(name));
                     } else {
-                        compute.inSideboardTwo.push(name);
+                        compute.inSideboardTwo.push(this.buildCardName(name));
                     }
                 });
             });
@@ -92,8 +106,8 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
         return compute;
     }
 
-    private async loadImageUri(name: string) {
-        if (name === this.state.hoveredCardName) {
+    private async loadImageUri(name?: string) {
+        if (name === undefined || name === this.state.hoveredCardName) {
             return;
         }
 
@@ -126,8 +140,8 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
         });
     }
 
-    private buildList(list: string[]) {
-        // We can get away with this because a Plains is ALWAYS a Plains
+    private buildList(list: CardName[], listName: string, onMouseHover?: ((name?: string)=>void) ) {
+        // We can get away with this because a Plains is ALWAYS named Plains
         const basicLandCounts: Record<string, number> = {
             'Plains': 0,
             'Island': 0,
@@ -139,66 +153,119 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
             'Snow-Covered Swamp': 0,
             'Snow-Covered Mountain': 0,
             'Snow-Covered Forest': 0,
+            'Wastes': 0,
         };
 
-        const listItems = list.map((name, ndx) => {
-            if (basicLandCounts[name] !== undefined) {
+        // The main list
+
+        const listItems = list.map((cardName, ndx) => {
+            const {name, displayName} = cardName;
+            if (name !== undefined && basicLandCounts[name] !== undefined) {
                 ++basicLandCounts[name];
                 return;
             }
-            return (<li key={`${name}${ndx}`} onMouseEnter={() => { this.loadImageUri(name); }}>
-                {name}
-            </li>);
-        });
+
+            return (<span className={'FreeFloatingListItem'}>
+                <b key={`${name}${ndx}`} onMouseEnter={() => {
+                    if (onMouseHover !== undefined) {
+                        onMouseHover(name);
+                    }
+                }}>
+                    {displayName}
+                </b>
+            </span>);
+        }).filter(item => item !== undefined);
+
+        let numDiffs = listItems.length;
+
+        // The special case for basic lands
 
         Object.entries(basicLandCounts).forEach((entry) => {
-            const [name, count] = entry;
+            const [landName, count] = entry;
             if (count === 0) {
                 return;
             }
-            listItems.push(<li key={`${name}${count}`} onMouseEnter={() => { this.loadImageUri(name) }}>
-                {count}x {name}
-            </li>);
+
+            numDiffs += count;
+            listItems.push(<span className={'FreeFloatingListItem'}>
+                <b key={`${landName}${count}`} onMouseEnter={() => {
+                    if (onMouseHover !== undefined) {
+                        onMouseHover(landName);
+                    }
+                }}>
+                    {count}x {landName}
+                </b>
+            </span>);
         });
 
         return (
-            <ul>
-                {listItems}
-            </ul>
+            <div style={{marginBottom: 20}}>
+                <span style={{display: 'flex', flexDirection: 'column'}}>
+                    <span style={{textDecoration: 'underline', fontWeight: 'bold', color: 'darkred'}}>{listName}</span>
+                    <span style={{fontSize: 11, color: 'white'}}>Total differences: {numDiffs}</span>
+                </span>
+
+                <span style={{display: 'flex', flexDirection: 'column'}}>
+                    {listItems}
+                </span>
+            </div>
         );
     }
 
-    private buildDeckComparisonOutput(deckList: string[], sideboardList: string[]) {
-        // Returns an empty div to maintain spacing (in the flexbox)
-        return deckList.length === 0 ? <div /> : (
-            (<div className={'DeckComparison'}>
+    private buildDeckComparisonOutput(deckList: CardName[], sideboardList: CardName[], comparisonErrors: ComparisonError[]) {
+        const comparisonLists = comparisonErrors.map(comparisonError => {
+            const { listName, comparisonValidationErrors } = comparisonError;
+            if (comparisonValidationErrors.length === 0) {
+                return;
+            }
+            const errorList = comparisonValidationErrors.map(vError => ({displayName: vError.message}));
+            return this.buildList(errorList, listName);
+        }).filter(elem => elem !== undefined);
 
-                {this.buildList(deckList)}
-                {sideboardList.length === 0 ? null :
-                    (<div>
-                        <br />
-                        {this.buildList(sideboardList)}
-                    </div>)
-                }
-            </div>)
-        );
+        return deckList.length === 0 && sideboardList.length === 0 ? (<div />) :
+            (<div className={'bg-gray-400 DeckComparison'}>
+
+            {comparisonLists}
+
+            {
+                deckList.length === 0 ? null :
+                    this.buildList(deckList, 'Mainboard', (name) => this.loadImageUri(name))
+            }
+
+            {
+                sideboardList.length === 0 ? null :
+                    this.buildList(sideboardList, 'Sideboard', (name) => this.loadImageUri(name))
+            }
+
+        </div>);
     }
 
     render() {
-        const computeResult = this.compute();
+        const { deckOne, deckTwo } = this.props;
+        const { inDeckOne, inSideboardOne, inDeckTwo, inSideboardTwo } = this.compute();
 
-        const imageWidth = 244;
+        const imageWidth = 270;//244;
         const imageHeight = 340;
 
         return (
-            <div className={"DeckOutput"}>
-                {this.buildDeckComparisonOutput(computeResult.inDeckOne, computeResult.inSideboardOne)}
-                {this.state.hoveredCardUri ?
-                    (<img id={'hoveredCard'} src={this.state.hoveredCardUri} alt={"Current Card"} width={imageWidth} height={imageHeight}/>)
-                    : // Keep the spacing even if an image isn't showing
-                    (<span style={{marginRight: imageWidth}} />)
-                }
-                {this.buildDeckComparisonOutput(computeResult.inDeckTwo, computeResult.inSideboardTwo)}
+            <div>
+                {inDeckOne.length > 0 && inDeckTwo.length > 0 ? (
+                    <div style={{margin: "10px auto", width: 'fit-content', fontSize: 16}}>(Hover over the card names!)</div>
+                ) : null}
+
+                <div className={"flex-auto flex flex-row justify-evenly mt-10"}>
+
+                    {this.buildDeckComparisonOutput(inDeckOne, inSideboardOne, deckOne.compareAgainst(deckTwo))}
+
+                    {this.state.hoveredCardUri ?
+                        (<img id={'hoveredCard'} src={this.state.hoveredCardUri} alt={"Current Card"} width={imageWidth} height={imageHeight}/>)
+                        : // Keep the spacing even if an image isn't showing
+                        (<span style={{marginRight: imageWidth}} />)
+                    }
+
+                    {this.buildDeckComparisonOutput(inDeckTwo, inSideboardTwo, deckTwo.compareAgainst(deckOne))}
+
+                </div>
             </div>
         );
     }

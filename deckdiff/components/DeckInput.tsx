@@ -49,7 +49,8 @@ export default class DeckInput extends React.Component<DeckInputProps, any> {
         const parsingErrorElements = this.buildDeckValidationErrors(validationErrors);
 
         return (
-            <div className={'DeckInput'} style={{background: (validationErrors.length === 0) ? 'greenyellow' : 'indianred'}} >
+            <div className={'flex-auto flex flex-col justify-evenly rounded-md p-8 m-5'}
+                 style={{background: (validationErrors.length === 0) ? 'greenyellow' : 'indianred'}} >
                 <span style={{margin: "auto"}}>
                     <EnumDropDown<LineFormat>
                         label={"Export Format:"}
