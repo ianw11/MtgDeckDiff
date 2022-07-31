@@ -2,7 +2,6 @@ import {ComparisonError, Deck, ValidationError} from "./Deck";
 import {CardAndQuantity} from "./CardAndQuantity";
 import {LineFormat} from "./LineFormat";
 import {DeckType} from "./DeckType";
-import {compileNonPath} from "next/dist/next-server/lib/router/utils/prepare-destination";
 
 type MagicCardData = {
     quantity: number;

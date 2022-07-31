@@ -1,18 +1,74 @@
-import React, {ChangeEvent} from "react";
+import React, {ChangeEvent, TextareaHTMLAttributes} from "react";
 import {Deck, ValidationError} from "../types/Deck";
 import {EnumDropDown} from "./EnumDropDown";
 import {getLineFormatSample, LineFormat} from "../types/LineFormat";
+
+type RobitResponse = {
+    event: string;
+    deckTitle: string;
+    decklist: string[];
+    sideboard: string[];
+};
 
 export type DeckInputProps = {
     onDeckTextChanged(text: string): void;
     onLineFormatChanged(lineFormat: LineFormat): void;
     deck: Deck;
 }
-export default class DeckInput extends React.Component<DeckInputProps, any> {
+type DeckInputState = {
+    decklist: string;
+}
+export default class DeckInput extends React.Component<DeckInputProps, DeckInputState> {
+
+    private static readonly IS_DEBUG = false;
+
+    private static readonly NECTARSAC_BASE_URL = DeckInput.IS_DEBUG ? 'http://192.168.1.16' : 'https://nectarsac.com';
+    private static readonly NECTARSAC_PORT = DeckInput.IS_DEBUG ? 4101 : 4100;
+    private static readonly NECTARSAC_PATH = '/mtgtop8'
+    private static readonly NECTARSAC_FULL_URL = `${DeckInput.NECTARSAC_BASE_URL}:${DeckInput.NECTARSAC_PORT}${DeckInput.NECTARSAC_PATH}`;
+
+    constructor(props: DeckInputProps) {
+        super(props);
+        this.state = {
+            decklist: '',
+        };
+    }
+
 
     private textChanged(event: ChangeEvent<HTMLTextAreaElement>) {
         const newText = event.target.value;
         this.props.onDeckTextChanged(newText);
+    }
+
+    private async urlChanged(event: ChangeEvent<HTMLTextAreaElement>) {
+        const url = event.target.value;
+
+        (event.target.previousSibling as HTMLInputElement).value = '';
+
+        let fullString = '';
+        if (url && url.includes('mtgtop8.com/') && url.includes('e=') && url.includes('d=') && url.includes('f=')) {
+            try {
+                const response = await fetch(DeckInput.NECTARSAC_FULL_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({url}),
+                });
+
+                const {event, deckTitle, decklist, sideboard} = await response.json() as RobitResponse;
+
+                fullString = decklist.join('\n') + (sideboard.length > 0 ? ('\nSideboard\n' + sideboard.join('\n')) : '');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        this.props.onDeckTextChanged(fullString);
+
+        this.setState({
+            decklist: fullString,
+        });
     }
 
     private buildDeckInfo(deck: Deck) {
@@ -45,6 +101,8 @@ export default class DeckInput extends React.Component<DeckInputProps, any> {
         const {deck} = this.props;
         const {validationErrors} = deck;
 
+        const { decklist } = this.state;
+
         const deckInfo = this.buildDeckInfo(deck);
         const parsingErrorElements = this.buildDeckValidationErrors(validationErrors);
 
@@ -62,7 +120,9 @@ export default class DeckInput extends React.Component<DeckInputProps, any> {
 
                 <br />
 
-                <textarea placeholder={'Enter a decklist'} onChange={this.textChanged.bind(this)} cols={45} rows={10} />
+                <FillableTextArea placeholder={'Enter a decklist'} onChange={this.textChanged.bind(this)} cols={45} rows={10} textToFill={decklist} />
+
+                <textarea placeholder={'Enter an mtgtop8 url'} onChange={this.urlChanged.bind(this)} cols={30} rows={1} style={{marginTop: 8}} />
 
                 {deckInfo}
 
@@ -70,4 +130,10 @@ export default class DeckInput extends React.Component<DeckInputProps, any> {
             </div>
         );
     }
+}
+
+const FillableTextArea = (props: TextareaHTMLAttributes<HTMLTextAreaElement> & { textToFill: string; }): React.ReactElement => {
+    return (
+        <textarea {...props} disabled={props.textToFill.length > 0} value={ props.textToFill === '' ? undefined : props.textToFill } />
+    );
 }

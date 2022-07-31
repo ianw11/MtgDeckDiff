@@ -1,4 +1,4 @@
-import React, {MouseEventHandler} from "react";
+import React, {ReactElement} from "react";
 import {ComparisonError, Deck} from "../types/Deck";
 const diff_match_patch_lib = require("../diff_match_patch");
 const {diff_match_patch, DIFF_EQUAL, DIFF_DELETE} = diff_match_patch_lib;
@@ -240,12 +240,17 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
         </div>);
     }
 
+    private buildCardPreview(cardUri?: string): ReactElement {
+        return (<div style={{width: '25%'}}> { cardUri ?
+            <img id={'hoveredCard'} src={this.state.hoveredCardUri} alt={"Current Card"} /> :
+            <span /> }
+        </div>);
+    }
+
     render() {
         const { deckOne, deckTwo } = this.props;
         const { inDeckOne, inSideboardOne, inDeckTwo, inSideboardTwo } = this.compute();
 
-        const imageWidth = 270;//244;
-        const imageHeight = 340;
 
         return (
             <div>
@@ -257,11 +262,7 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
 
                     {this.buildDeckComparisonOutput(inDeckOne, inSideboardOne, deckOne.compareAgainst(deckTwo))}
 
-                    {this.state.hoveredCardUri ?
-                        (<img id={'hoveredCard'} src={this.state.hoveredCardUri} alt={"Current Card"} width={imageWidth} height={imageHeight}/>)
-                        : // Keep the spacing even if an image isn't showing
-                        (<span style={{marginRight: imageWidth}} />)
-                    }
+                    {this.buildCardPreview(this.state.hoveredCardUri)}
 
                     {this.buildDeckComparisonOutput(inDeckTwo, inSideboardTwo, deckTwo.compareAgainst(deckOne))}
 

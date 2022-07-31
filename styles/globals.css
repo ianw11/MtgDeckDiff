@@ -54,8 +54,9 @@ body {
 }
 
 #hoveredCard {
-  display: inline-block;
-  float: left;
+  position: sticky;
+  top: 10%;
+  margin: 0 auto;
 }
 
 .EnumDropDown {
