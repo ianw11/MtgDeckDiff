@@ -46,7 +46,7 @@ export default class DeckInput extends React.Component<DeckInputProps, DeckInput
         (event.target.previousSibling as HTMLInputElement).value = '';
 
         let fullString = '';
-        if (url && url.includes('mtgtop8.com/') && url.includes('e=') && url.includes('d=') && url.includes('f=')) {
+        if (url && url.includes('mtgtop8.com/') && url.includes('e=') && url.includes('d=')) {
             try {
                 const response = await fetch(DeckInput.NECTARSAC_FULL_URL, {
                     method: 'POST',
