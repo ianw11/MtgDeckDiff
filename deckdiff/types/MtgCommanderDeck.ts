@@ -12,7 +12,7 @@ export class MtgCommanderDeck extends MtgDeck {
         super(type, lineFormat);
     }
 
-    processLine(line: string): ValidationError | undefined {
+    override processLine(line: string): ValidationError | undefined {
         if (line == 'Commander') {
             this.nextLineIsCommander = true;
             return;
@@ -30,7 +30,7 @@ export class MtgCommanderDeck extends MtgDeck {
             if (data.quantity !== 1) {
                 return {message: "Invalid quantity for Commander: " + data.quantity};
             }
-            this.commander = new CardAndQuantity(data.name, data.set, 1);
+            this.commander = new CardAndQuantity({name: data.name, types: [], cardSet: data.set}, 1);
             return;
         }
         return super.processLine(line);
@@ -50,7 +50,7 @@ export class MtgCommanderDeck extends MtgDeck {
         return errors;
     }
 
-    compareAgainst(other: Deck): ComparisonError[] {
+    override compareAgainst(other: Deck): ComparisonError[] {
 
         const comparisonErrors = [];
 

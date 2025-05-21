@@ -1,7 +1,8 @@
 import {ComparisonError, Deck, ValidationError} from "./Deck";
-import {CardAndQuantity} from "./CardAndQuantity";
+import {CardAndQuantity, MtGCardType} from "./CardAndQuantity";
 import {LineFormat} from "./LineFormat";
 import {DeckType} from "./DeckType";
+import {Card, Cards} from "scryfall-api";
 
 type MagicCardData = {
     quantity: number;
@@ -14,6 +15,8 @@ export class MtgDeck extends Deck {
 
     readonly lineFormat: LineFormat;
 
+    private inAboutSection = false;
+
     private inMainboard = true;
 
     private companion?: CardAndQuantity;
@@ -24,7 +27,7 @@ export class MtgDeck extends Deck {
         this.lineFormat = lineFormat;
     }
 
-    processLine(line: string): ValidationError | undefined {
+    override processLine(line: string): ValidationError | undefined {
         const data = this.parseMagicCardLine(line);
         if (!data) {
             return;
@@ -33,7 +36,21 @@ export class MtgDeck extends Deck {
             return {message: data.replaceAll("%LINE%", line)};
         }
         const {name, quantity, set} = data;
-        const card = new CardAndQuantity(name, set, quantity);
+        if (this.shouldSkipCard(name)) {
+            return;
+        }
+
+
+        //console.log(`Requesting card name ${name} from Scryfall`);
+        //const scryfallCard = await this.lookUpCardOnScryfall(name);
+        //const types = this.buildTypesArrayFromScryfallCard(scryfallCard);
+        //console.log(types);
+        const card = new CardAndQuantity(
+            {
+                name,
+                types: [],
+                cardSet: set
+            }, quantity);
 
         if (this.companionNextLine) {
             this.companionNextLine = false;
@@ -49,7 +66,23 @@ export class MtgDeck extends Deck {
         }
     }
 
+    // If a string is returned, that's an error message
+    // Otherwise it should return a Magic Card + quantity ( + setId + cardId... if we ever get there)
     protected parseMagicCardLine(line: string): string | MagicCardData | undefined {
+        if (line === 'About') {
+            this.inAboutSection = true;
+            return;
+        }
+        if (this.inAboutSection) {
+            if (line.length === 0) {
+                this.inAboutSection = false;
+            } else {
+                // if (line.startsWith("Name')) { parse the name}
+                // No-op
+            }
+            return;
+        }
+
         if (line === 'Deck' || line.length === 0) {
             return;
         }
@@ -60,7 +93,8 @@ export class MtgDeck extends Deck {
             this.companionNextLine = true;
             return;
         }
-        if (line === 'Sideboard') {
+        if (line.toLocaleLowerCase().startsWith('sideboard')) {
+            console.log(`Line flipping to sideboard: ${line}`);
             this.inMainboard = false;
             return;
         }
@@ -115,7 +149,18 @@ export class MtgDeck extends Deck {
         return quantity;
     }
 
-    compareAgainst(other: Deck): ComparisonError[] {
+    private shouldSkipCard(cardName: string): boolean {
+        // All lower-case
+        cardName = cardName.toLocaleLowerCase();
+
+        return cardName.startsWith('token: ') ||
+            cardName.startsWith('emblem: ') ||
+            cardName === 'clue' ||
+            cardName === 'orc army' ||
+            cardName === 'on an adventure'
+    }
+
+    override compareAgainst(other: Deck): ComparisonError[] {
         const companionErrors: ValidationError[] = [];
 
         if (! (other instanceof MtgDeck)) {
@@ -139,5 +184,22 @@ export class MtgDeck extends Deck {
             });
         }
         return errors;
+    }
+
+    protected async lookUpCardOnScryfall(cardName: string): Promise<Card> {
+        const card = await Cards.byName(cardName);
+        if (!card) {
+            throw new Error(`Could not load card ${cardName}`);
+        }
+
+        return card;
+    }
+
+    private buildTypesArrayFromScryfallCard(card: Card): MtGCardType[] {
+        return card.type_line.split('//')[0]
+            .split(' — ')[0]
+            .split(' ')
+            .map(type => type.toLocaleUpperCase())
+            .filter(type => !!type) as MtGCardType[];
     }
 }

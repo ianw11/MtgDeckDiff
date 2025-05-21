@@ -1,7 +1,7 @@
 import React, {ReactElement} from "react";
 import {ComparisonError, Deck} from "../types/Deck";
-const diff_match_patch_lib = require("../diff_match_patch");
-const {diff_match_patch, DIFF_EQUAL, DIFF_DELETE} = diff_match_patch_lib;
+import {DeckType} from "../types/DeckType";
+import {diff_match_patch, DIFF_EQUAL, DIFF_DELETE} from "../diff_match_patch";
 
 type DiffCompute = {
     inDeckOne: CardName[];
@@ -13,6 +13,7 @@ type DiffCompute = {
 export type DeckOutputProps = {
     deckOne: Deck;
     deckTwo: Deck;
+    deckType: DeckType;
 }
 type DeckOutputState = {
     hoveredCardName?: string;
@@ -31,7 +32,7 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
     }
 
     private diffLines(first: string, second: string) {
-        const dmp = new diff_match_patch();
+        const dmp = new diff_match_patch() as any;
         const data = dmp.diff_linesToChars_(first, second);
         const diffs = dmp.diff_main(data.chars1, data.chars2, false);
         dmp.diff_charsToLines_(diffs, data.lineArray);
@@ -111,7 +112,7 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
             return;
         }
 
-        const responseRaw = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${name}`);
+        const responseRaw = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`);
         const response = await responseRaw.json();
 
         if (response.object === 'error') {
@@ -165,6 +166,7 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
                 return;
             }
 
+            // eslint-disable-next-line react/jsx-key
             return (<span className={'FreeFloatingListItem'}>
                 <b key={`${name}${ndx}`} onMouseEnter={() => {
                     if (onMouseHover !== undefined) {
@@ -250,7 +252,6 @@ export class DeckOutput extends React.Component<DeckOutputProps, DeckOutputState
     render() {
         const { deckOne, deckTwo } = this.props;
         const { inDeckOne, inSideboardOne, inDeckTwo, inSideboardTwo } = this.compute();
-
 
         return (
             <div>

@@ -2,10 +2,11 @@ import React, {ChangeEvent, TextareaHTMLAttributes} from "react";
 import {Deck, ValidationError} from "../types/Deck";
 import {EnumDropDown} from "./EnumDropDown";
 import {getLineFormatSample, LineFormat} from "../types/LineFormat";
+import {NECTARSAC_FULL_URL} from "../Constants";
 
 type RobitResponse = {
-    event: string;
-    deckTitle: string;
+    event?: string;
+    deckTitle?: string;
     decklist: string[];
     sideboard: string[];
 };
@@ -19,13 +20,6 @@ type DeckInputState = {
     decklist: string;
 }
 export default class DeckInput extends React.Component<DeckInputProps, DeckInputState> {
-
-    private static readonly IS_DEBUG = false;
-
-    private static readonly NECTARSAC_BASE_URL = DeckInput.IS_DEBUG ? 'http://192.168.1.16' : 'https://nectarsac.com';
-    private static readonly NECTARSAC_PORT = DeckInput.IS_DEBUG ? 4101 : 4100;
-    private static readonly NECTARSAC_PATH = '/mtgtop8'
-    private static readonly NECTARSAC_FULL_URL = `${DeckInput.NECTARSAC_BASE_URL}:${DeckInput.NECTARSAC_PORT}${DeckInput.NECTARSAC_PATH}`;
 
     constructor(props: DeckInputProps) {
         super(props);
@@ -46,9 +40,9 @@ export default class DeckInput extends React.Component<DeckInputProps, DeckInput
         (event.target.previousSibling as HTMLInputElement).value = '';
 
         let fullString = '';
-        if (url && url.includes('mtgtop8.com/') && url.includes('e=') && url.includes('d=')) {
+        if (url) {
             try {
-                const response = await fetch(DeckInput.NECTARSAC_FULL_URL, {
+                const response = await fetch(NECTARSAC_FULL_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -120,9 +114,20 @@ export default class DeckInput extends React.Component<DeckInputProps, DeckInput
 
                 <br />
 
-                <FillableTextArea placeholder={'Enter a decklist'} onChange={this.textChanged.bind(this)} cols={45} rows={10} textToFill={decklist} />
+                <FillableTextArea
+                    placeholder={'Enter a decklist'}
+                    onChange={this.textChanged.bind(this)}
+                    cols={45} rows={10}
+                    textToFill={decklist}
+                />
 
-                <textarea placeholder={'Enter an mtgtop8 url'} onChange={this.urlChanged.bind(this)} cols={30} rows={1} style={{marginTop: 8}} />
+                <textarea
+                    placeholder={'Enter an mtgtop8 url'}
+                    onChange={this.urlChanged.bind(this)}
+                    cols={30}
+                    rows={1}
+                    style={{marginTop: 8}}
+                />
 
                 {deckInfo}
 
@@ -134,6 +139,10 @@ export default class DeckInput extends React.Component<DeckInputProps, DeckInput
 
 const FillableTextArea = (props: TextareaHTMLAttributes<HTMLTextAreaElement> & { textToFill: string; }): React.ReactElement => {
     return (
-        <textarea {...props} disabled={props.textToFill.length > 0} value={ props.textToFill === '' ? undefined : props.textToFill } />
+        <textarea
+            {...props}
+            disabled={props.textToFill.length > 0}
+            value={ props.textToFill === '' ? undefined : props.textToFill }
+        />
     );
 }
